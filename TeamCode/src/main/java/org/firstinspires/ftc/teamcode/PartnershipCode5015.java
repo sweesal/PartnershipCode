@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -28,6 +29,8 @@ public class PartnershipCode5015 extends OpMode
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor intake = null;
+    private DcMotor leftBackMotor = null;
+    private DcMotor rightBackMotor = null;
 
 
     /*
@@ -39,10 +42,14 @@ public class PartnershipCode5015 extends OpMode
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
         intake  = hardwareMap.get(DcMotor.class, "intake");
+        leftBackMotor = hardwareMap.get(DcMotor.class, "leftBackMotor");
+        rightBackMotor = hardwareMap.get(DcMotor.class, "rightBackMotor");
 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
         intake.setDirection(DcMotor.Direction.FORWARD);
+        leftBackMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBackMotor.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -69,8 +76,37 @@ public class PartnershipCode5015 extends OpMode
     @Override
     public void loop() {
 
+
+        // Setup a variable for each drive wheel to save power level for telemetry
+        double leftBackMotorPower;
+        double rightBackMotorPower;
+
+        // Choose to drive using either Tank Mode, or POV Mode
+        // Comment out the method that's not used.  The default below is POV.
+
+        // POV Mode uses left stick to go forward, and right stick to turn.
+        // - This uses basic math to combine motions and is easier to drive straight.
+        double drive = -gamepad1.left_stick_y;
+        double turn  =  gamepad1.right_stick_x;
+        leftBackMotorPower    = Range.clip(drive + turn, -1.0, 1.0) ;
+        rightBackMotorPower   = Range.clip(drive - turn, -1.0, 1.0) ;
+
+        // Tank Mode uses one stick to control each wheel.
+        // - This requires no math, but it is hard to drive forward slowly and keep straight.
+        // leftPower  = -gamepad1.left_stick_y ;
+        // rightPower = -gamepad1.right_stick_y ;
+
+        // Send calculated power to wheels
+        leftBackMotor.setPower(leftBackMotorPower);
+        rightBackMotor.setPower(rightBackMotorPower);
+
+
+        telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftBackMotorPower, rightBackMotorPower);
+
         // Send calculated power to wheels
         intake.setPower(gamepad1.right_stick_y);
+
+
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime.toString());
