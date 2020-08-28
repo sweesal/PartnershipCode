@@ -4,6 +4,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -17,26 +19,47 @@ public class Code6986 extends OpMode {
     double[] speed;
     //创建一个数组
     private DcMotor intake;
+    private DcMotor leftin;
+    private DcMotor rightin;
+
+    private DcMotor armHex;
     double intakeOutput;
     boolean reverse = false;
+    boolean IT = false;
+    int AT = 1;
     ElapsedTime Duration = new ElapsedTime();
+    ElapsedTime IntakeT = new ElapsedTime();
+    ElapsedTime ArmT = new ElapsedTime();
 
+    private DigitalChannel encoder0;
+    private DigitalChannel encoder1;
     @Override
     public void init() {
         Duration.reset();
 
         //drive train
-        leftfront = hardwareMap.get(DcMotorEx.class,"leftfront");
-        rightfront = hardwareMap.get(DcMotorEx.class,"rightfront");
-        leftback = hardwareMap.get(DcMotorEx.class,"leftback");
-        rightback = hardwareMap.get(DcMotorEx.class,"rightback");
+        leftfront = hardwareMap.get(DcMotorEx.class,"LF");
+        rightfront = hardwareMap.get(DcMotorEx.class,"RF");
+        leftback = hardwareMap.get(DcMotorEx.class,"LB");
+        rightback = hardwareMap.get(DcMotorEx.class,"RB");
         leftfront.setDirection(DcMotorEx.Direction.FORWARD);
         rightfront.setDirection(DcMotorEx.Direction.REVERSE);
         leftback.setDirection(DcMotorEx.Direction.FORWARD);
         rightback.setDirection(DcMotorEx.Direction.REVERSE);
+        //elevator
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        armHex = hardwareMap.get(DcMotor.class, "arm");
 
         //intake
-        intake = hardwareMap.get(DcMotor.class, "lift");
+        leftin = hardwareMap.get (DcMotor.class, "LI");
+        rightin = hardwareMap.get(DcMotor.class, "RI");
+        leftin.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightin.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        encoder0 = hardwareMap.get(DigitalChannel.class, "encoder0");
+        encoder1 = hardwareMap.get(DigitalChannel.class, "encoder1");
+        encoder0.setMode(DigitalChannel.Mode.INPUT);
+        encoder1.setMode(DigitalChannel.Mode.INPUT);
     }
 
     @Override
@@ -44,7 +67,7 @@ public class Code6986 extends OpMode {
 
         double value1 = gamepad1.left_stick_x;
         double value2 = gamepad1.right_stick_x;
-        double value3 = gamepad1.left_stick_y;
+        double value3 = -gamepad1.left_stick_y;
 
         if(Math.abs(value1)<0.1) value1=0;
         if(Math.abs(value2)<0.1) value2=0;
@@ -80,7 +103,30 @@ public class Code6986 extends OpMode {
             value3 = -value3;
         }
 
+        if (gamepad1.a && IntakeT.time()>0.5){
+            IT = ! IT;
+            IntakeT.reset();
+        }
 
+        if (IT){
+            leftin.setPower(1);
+            rightin.setPower(1);
+        }
+        else{
+            leftin.setPower(0);
+            rightin.setPower(0);
+        }
+
+        if (gamepad1.x){
+            armHex.setPower(AT);
+        }
+        else{
+            armHex.setPower(0);
+        }
+        if (gamepad1.y && ArmT.time()>0.5){
+            AT = -AT;
+            ArmT.reset();
+        }
         double[]speed = {
                 (value1+value2+value3),
                 (-value1-value2+value3),
@@ -113,11 +159,15 @@ public class Code6986 extends OpMode {
                 gamepad1.left_trigger - gamepad1.right_trigger, -1, 1);
         intake.setPower(intakeOutput);
 
+
+
 //        telemetry.addData("velocity",  "velocity %7d :%7d :%7d :%7d",
 //                leftfront.getVelocity(),
 //                rightfront.getVelocity(),
 //                leftback.getVelocity(),
 //                rightback.getVelocity());
-//        telemetry.update();
+        telemetry.addData("encoder1State", encoder0.getState());
+        telemetry.addData("encoder2State", encoder1.getState());
+        telemetry.update();
     }
 }
